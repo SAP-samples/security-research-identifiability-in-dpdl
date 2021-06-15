@@ -1,5 +1,5 @@
 # Indeitifiability Scores for Differentially Private Deep Learning
-.
+
 ## Description
 SAP Security Research sample code to reproduce the research done in our paper "Quantifying identifiability to choose and audit \eps in differentially private deep learning"[1].
 
