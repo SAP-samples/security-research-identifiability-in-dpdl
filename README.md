@@ -85,7 +85,7 @@ If you use this code in your research, please cite:
 
 ## References
 [1] Daniel Bernau, Guenther Eibl, Philip Grassal, Hannah Keller, Florian Kerschbaum:
-Quantifying identifiability to choose and audit \eps in differentially private deep learning.
+Quantifying identifiability to choose and audit epsilon in differentially private deep learning.
 arXiv:2103.02913
 https://arxiv.org/abs/2103.02913
 
