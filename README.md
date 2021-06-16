@@ -1,4 +1,5 @@
 # Indeitifiability Scores for Differentially Private Deep Learning
+[![REUSE status](https://api.reuse.software/badge/github.com/SAP-samples/security-research-identifiability-in-dpdl)](https://api.reuse.software/info/github.com/SAP-samples/security-research-identifiability-in-dpdl)
 
 ## Description
 SAP Security Research sample code to reproduce the research done in our paper "Quantifying identifiability to choose and audit \eps in differentially private deep learning"[1].
