@@ -7,9 +7,6 @@ import random
 import tensorflow as tf
 from tensorflow.keras.callbacks import LambdaCallback
 
-
-
-
 if __name__ == '__main__':
     parser =argparse.ArgumentParser(description="DPA_Model_training")
     parser.add_argument("--rho", "-r", default=0.9, type=float)
@@ -24,17 +21,13 @@ if __name__ == '__main__':
     parser.add_argument("--identifier", "-id", type=int,default=1)
     parser.add_argument("--bounded", "-bnd", action="store_true")
     parser.add_argument("--MNIST", "-mnst", action="store_true")
+    parser.add_argument("--PURCH", "-prch", action="store_true")
+    parser.add_argument("--ADULT", "-adlt", action="store_true")
 
     args = parser.parse_args()
     print(vars(args))
     #for graph
     tf.compat.v1.disable_v2_behavior()
-    #seed_value = 42
-    #os.environ['TF_DETERMINISTIC_OPS'] = '1'
-    #os.environ['PYTHONHASHSEED'] = str(seed_value)
-    #random.seed(43)
-    #np.random.seed(seed_value)
-    #tf.random.set_seed(seed_value)
 
     learning_rate=args.learning_rate
     l2_norm_clip = args.l2_norm_clip
@@ -50,6 +43,8 @@ if __name__ == '__main__':
     run_id = args.identifier
     bound = args.bounded
     MNIST = args.MNIST
+    ADULT = args.ADULT
+    PURCH = args.PURCH
 
     repeated_attack = RepeatedAttack()
     results= repeated_attack.nn_attack_graph(epochs=epochs, 
@@ -62,9 +57,11 @@ if __name__ == '__main__':
                                         learning_rate = learning_rate, 
                                         l2_norm_clip=l2_norm_clip,
                                         bounded=bound,
-                                        MNIST=MNIST)
+                                        MNIST=MNIST,
+                                        ADULT=ADULT,
+                                        PURCH=PURCH)
 
-    path = f"./experiments/rho_{rho}_delta_{delta}_local_{local}_bounded_{bound}_id_{run_id}.npz"#graph_rho_{rho}_delta_{delta}_local_{local}_bounded_{bound}_id_{run_id}.npz"
+    path = f"./experiments/rho_{rho}_delta_{delta}_local_{local}_bounded_{bound}_id_{run_id}.npz"
     os.makedirs(os.path.dirname(path), exist_ok=True)
     np.savez(path, **results, args=vars(args))
     #os.system('sudo shutdown -h 0')
