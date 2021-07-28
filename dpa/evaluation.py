@@ -1,5 +1,6 @@
 from dpa.attacker import GaussianAttacker
 from dpa.purch_query import Model_Purch
+from dpa.adult_query import Model_Adult
 from dpa.query import Model
 
 import numpy as np
@@ -64,7 +65,6 @@ class RepeatedAttack:
         for i in range(len(X)):
             if (X[i]==alt[output]).all():
                 index = i
-        
 
         x_train_orig = X[:len(orig)]
         x_train_alt = np.copy(X[:len(orig)])
@@ -86,30 +86,28 @@ class RepeatedAttack:
         alt = np.load(path.join(filepath, f"{alt}.npz"), allow_pickle=True)["lookup"]
 
         output = [index for index, elem in enumerate(orig) if (elem != alt[index]).any()][0]
-        print(output)
+        #print(output)
 
-        all_data = np.load('../../../data/adult/adult.npz')
-        X = all_data['x'][:80000]
-        X = X.reshape((len(X), 105))
-        Y = np.load('../../../data/adult/adult_labels.npz')['y']#tf.keras.utils.to_categorical(all_data['y'][:80000])
+        all_data = np.load('../../../data/adult/adult_wo_na.npz')
+        X = all_data['x']
+        X = X.reshape((len(X), 104))
+        Y = np.load('../../../data/adult/adult_wo_na_labels.npz')['y']
 
         index = -1
         for i in range(len(X)):
             if (X[i]==alt[output]).all():
                 index = i
         
-
+        # Train size from original paper 30162
+        # Test size from original paper 15060
         x_train_orig = X[:len(orig)]
         x_train_alt = np.copy(X[:len(orig)])
         x_train_alt[output] = X[index]
         y_train_orig = Y[:len(orig)]
         y_train_alt = np.copy(Y[:len(orig)])
         y_train_alt[output] = Y[index]
-        x_test = X[40000:]
-        y_test = Y[40000:]
-        if index > 40000:
-            x_test[index-40000] = X[59999]
-            y_test[index-40000] = Y[59999]
+        x_test = X[30162:]
+        y_test = Y[30162:]
 
 
         return x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test
@@ -146,6 +144,32 @@ class RepeatedAttack:
             x_test[index-60000] = x_train[-1]
             y_test[index-60000] = y_train[-1]
 
+
+        return x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test
+
+    def load_unbounded_adult_train_test_data(self, orig, alt, filepath):
+        orig = np.load(path.join(filepath, f"{orig}.npz"), allow_pickle=True)["lookup"]
+        alt = np.load(path.join(filepath, f"{alt}.npz"), allow_pickle=True)["lookup"]
+        all_data = np.load('../../../data/adult/adult_wo_na.npz')
+        X = all_data['x']
+        Y = np.load('../../../data/adult/adult_wo_na_labels.npz')['y']
+
+        index = -1
+        for i in range(len(X)):
+            if not (X[i]==alt[i]).all():
+                index = i
+                break
+
+        x_train_orig = X[:len(orig)]
+        x_train_alt = np.copy(X[:len(orig)])
+        x_train_alt = np.delete(x_train_alt, index,0)
+
+        y_train_orig = Y[:len(orig)]
+        y_train_alt = np.copy(Y[:len(orig)])
+        y_train_alt = np.delete(y_train_alt, index,0)
+
+        x_test = X[30162:]
+        y_test = Y[30162:]
 
         return x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test
 
@@ -208,147 +232,32 @@ class RepeatedAttack:
 
         return x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test
 
-
-    def get_train_test_data(self, bounded, white_picture, n_train):
-        
-        n=50
-        (x_train, y_train), (x_test, y_test) = mnist.load_data()
-        x_train = (x_train[...,None] / 255)[n:n_train+1+n]
-        x_test = (x_test[...,None] / 255)[:n_train]
-        y_train = tf.keras.utils.to_categorical(y_train)[n:n_train+1+n]
-        y_test = tf.keras.utils.to_categorical(y_test)[n:n_train+n]
-        y_train = y_train[:n_train+1]
-        y_test = y_test[:n_train]
-        if bounded:
-            if white_picture:
-                x_train_orig, x_train_alt = x_train[:n_train-1], x_train[:n_train-1]
-                x_train_orig = np.vstack([x_train_orig, np.zeros_like(x_train_orig[[0]])])
-                x_train_alt = np.vstack([x_train_alt, np.ones_like(x_train_alt[[0]])])
-                y_train_orig, y_train_alt = y_train[:n_train-1], y_train[:n_train-1]
-                #y_train_orig = np.vstack([y_train_orig, 0])
-                #y_train_alt = np.vstack([y_train_alt, 0])
-                y_train_orig = np.vstack([y_train_orig, tf.keras.utils.to_categorical(0, num_classes=10)])
-                y_train_alt = np.vstack([y_train_alt, tf.keras.utils.to_categorical(0, num_classes=10)])
-            else:
-                x_train_orig, x_train_alt = x_train[:n_train], x_train[1:n_train+1]
-                y_train_orig, y_train_alt = y_train[:n_train], y_train[1:n_train+1]
-        else:
-            if white_picture:
-                x_train_orig, x_train_alt = x_train[:n_train-1], x_train[:n_train-1]
-                x_train_orig = np.vstack([x_train_orig, np.zeros_like(x_train_orig[[0]])])
-                y_train_orig, y_train_alt = y_train[:n_train-1], y_train[:n_train-1]
-                y_train_orig = np.vstack([y_train_orig, 0])
-                y_train_orig = np.vstack([y_train_orig, tf.keras.utils.to_categorical(0, num_classes=10)])
-            else:
-                x_train_orig = x_train[:n_train]
-                y_train_orig = y_train[:n_train]
-                X = x_train.reshape((len(x_train), 28 * 28))[:n_train]
-                X_dist = np.sqrt(np.sum(np.square(X), axis=1))
-                X_dist = X_dist.astype(np.float16)
-                index = np.argmax(X_dist)
-
-                x_train_alt = np.concatenate((x_train_orig[:index], x_train_orig[index+1:]))
-                y_train_alt = np.concatenate((y_train_orig[:index], y_train_orig[index+1:]))
-
-
-        #y_train_orig = tf.keras.utils.to_categorical(y_train_orig)
-        #y_train_alt = tf.keras.utils.to_categorical(y_train_alt)
-        print("shape ",np.shape(x_train_orig),np.shape(x_train_alt),np.shape(y_train_orig),np.shape(y_train_alt),np.shape(x_test),np.shape(y_test))
-        return x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test
-
-
-    def nn_attack(self, epochs, composed_delta, rho, worst_case, local, sequential, iterations, learning_rate, l2_norm_clip, bounded):
+    def nn_attack_graph(self, epochs, composed_delta, rho, worst_case, local, sequential, iterations, learning_rate, l2_norm_clip, bounded, MNIST, ADULT, PURCH):
         adversary = GaussianAttacker()
-        
-        #(x_train, y_train), (x_test, y_test) = mnist.load_data()        
-        # flatten and rescale to [0,1]
-        # to categorical
-        n_train = 50
-        x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.get_train_test_data(bounded=bounded, white_picture=False, n_train=n_train)
-
-        
-        composed_eps = adversary.get_epsilon_for_confidence_bound(rho)
-
-        if worst_case:
-            # sequential composition due, only valid if worst case noise enforced due to loose bounds
-            noise_multiplier = adversary.get_noise_multiplier_for_seq_eps(composed_eps, composed_delta, epochs)
-            expected_success_rate = adversary.expected_seq_success_rate(composed_eps, composed_delta, epochs)
-        else:
-            if sequential:
-                noise_multiplier = adversary.get_noise_multiplier_for_seq_eps(composed_eps, composed_delta, epochs)
-                expected_success_rate = adversary.expected_seq_success_rate(composed_eps, composed_delta, epochs)
-            else:
-                #rdp world
-                noise_multiplier = adversary.get_noise_multiplier_for_rdp_eps(composed_eps, composed_delta, epochs)
-                expected_success_rate = adversary.expected_rdp_success_rate(noise_multiplier,epochs)
-
-        run_summary = {}
-        
-        print(f'Adversary confidence: {adversary.get_confidence_bound(composed_eps)}', flush=True)
-        print(f'Adversary success rate: {expected_success_rate}', flush=True)
-        
-        for i in range(iterations):
-            # fit the model
-            m = Model_Purch()
-            m.set_training_params(noise_multiplier=noise_multiplier,
-                                learning_rate=learning_rate,
-                                l2_norm_clip=l2_norm_clip,
-                                epochs=epochs,
-                                delta=composed_delta)
-                                
-            results = m.train_eager(train_set=(x_train_orig, y_train_orig),
-                            alternative_set=(x_train_alt, y_train_alt), 
-                            test_set=(x_test, y_test),
-                            local=local, 
-                            worst_case=worst_case,
-                            bounded=bounded)
-            
-            original, alt, private, train_acc, test_acc = results
-            
-            sensitivities = [np.linalg.norm(np.subtract(origin, alter))
-                            for (origin, alter) in zip(original, alt)]
-            print("sensitivities ", sensitivities, flush=True)
-            # sensitivities
-            if local:
-                sensitivities = [np.linalg.norm(np.subtract(origin, alter))
-                            for (origin, alter) in zip(original, alt)]
-            elif bounded:
-                sensitivities = 2*l2_norm_clip
-            else:
-                sensitivities = l2_norm_clip
-
-
-            
-            sigmas = np.multiply(noise_multiplier, sensitivities)
-            biased, unbiased = adversary.infer(original, alt, private, sigmas)
-
-            run_summary[f"run_{i}"] = {"biased_beliefs": biased, "unbiased_beliefs": unbiased, "sensitivites": sensitivities, "train_acc":train_acc, "test_acc":test_acc}
-            #m.save('./experiments/local_sensitivity_mnist/model.h5')
-            print("Belief iteration ", i, ": ", biased[0][-1], flush=True)
-            tf.keras.backend.clear_session()
-        return run_summary
-
-
-    def nn_attack_graph(self, epochs, composed_delta, rho, worst_case, local, sequential, iterations, learning_rate, l2_norm_clip, bounded, MNIST):
-        adversary = GaussianAttacker()
-        n_train = 100
 
         if bounded:
             print("Running bounded")
             if MNIST:
+                n_train = 100
                 x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.load_train_test_data(orig="original_data_set_ssim_size_100_place_1", alt="alt_data_set_ssim_size_100_place_1", filepath="../../../data/mnist/ssim/")
-            else:
-                #x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.load_purch_train_test_data(orig="original_data_set_cosine_pca_size_1000_place_1", alt="alt_data_set_cosine_pca_size_1000_place_1", filepath="../../../data/purch/pca/")
-                x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.load_adult_train_test_data(orig="original_data_adult_set_size_100_last_place_1", alt="alt_data_adult_set_size_100_last_place_1", filepath="../../../data/adult/")
-                #x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.load_adult_train_test_data(orig="original_data_set_adult_size_100_place_1", alt="alt_data_set_adult_size_100_place_1", filepath="../../../data/adult/")
-
+            elif PURCH:
+                n_train = 1000
+                x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.load_purch_train_test_data(orig="original_data_set_ham_size_100_place_1", alt="alt_data_set_ham_size_1000_place_1", filepath="../../../data/purch/pca/")
+            elif ADULT:
+                n_train = 1000
+                x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.load_adult_train_test_data(orig="original_data_set_adult_wo_na_size_1000_place_1", alt="alt_data_set_adult_wo_na_size_1000_place_1", filepath="../../../data/adult/")
         else:
             print("Running unbounded")
             if MNIST:
+                n_train = 100
                 x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.load_unbounded_train_test_data(orig="unbounded_original_data_set_ssim_size_100", alt="unbounded_alt_data_set_ssim_size_100", filepath="../../../data/mnist/ssim/")
-            else:
+            elif PURCH:
+                n_train = 1000
                 x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.load_unbounded_purch_train_test_data(orig="unbounded_original_data_set_ham_size_1000", alt="unbounded_alt_data_set_ham_size_1000", filepath="../../../data/purch/hamming/")
-    
+            elif ADULT:
+                n_train = 1000
+                x_train_orig, x_train_alt, y_train_orig, y_train_alt, x_test, y_test = self.load_unbounded_adult_train_test_data(orig="unbounded_original_adult_data_set_manh_size_1000", alt="unbounded_alt_adult_data_set_manh_size_1000", filepath="../../../data/adult/")
+
         
         composed_eps = adversary.get_epsilon_for_confidence_bound(rho)
 
@@ -375,9 +284,11 @@ class RepeatedAttack:
             if MNIST:
                 print("Running MNIST")
                 m = Model()
-            else:
-                print("Running Purchases")
-                #m = Model_Purch()
+            elif PURCH:
+                print("Running PURCHASE-100")
+                m = Model_Purch()
+            elif ADULT:
+                print("Running Adult")
                 m = Model_Adult()
             m.set_training_params(noise_multiplier=noise_multiplier,
                                 learning_rate=learning_rate,
